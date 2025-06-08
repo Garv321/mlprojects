@@ -1,18 +1,18 @@
-import os
-import sys
 import sys
 import os
-
-# Get the absolute path to the project root (2 levels up from this file)
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-sys.path.append(project_root)
-
 import pandas as pd
 from dataclasses import dataclass
 from sklearn.model_selection import train_test_split
 
+# Fix sys.path for direct execution
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.append(project_root)
+
 from src.exception import CustomException
 from src.logger import logging
+
+from src.components.data_transformation import DataTransformation
+from src.components.model_trainer import ModelTrainer  # Ensure this is the correct trainer class name
 
 @dataclass
 class DataIngestionConfig:
@@ -28,34 +28,34 @@ class DataIngestion:
         logging.info("Entered the data ingestion method/component")
 
         try:
-            # Load dataset
             df = pd.read_csv("C:/Users/garvs/OneDrive/Desktop/mlprojects/notebook/data/stud.csv")
             logging.info("Read the dataset as dataframe")
 
-            # Create artifacts directory
             os.makedirs(os.path.dirname(self.ingestion_config.train_data_path), exist_ok=True)
 
-            # Save raw data
             df.to_csv(self.ingestion_config.raw_data_path, index=False, header=True)
+            logging.info("Saved raw data to artifacts")
 
-            # Train-test split
-            logging.info("Train-test split initiated")
             train_set, test_set = train_test_split(df, test_size=0.2, random_state=42)
+            logging.info("Train-test split completed")
 
-            # Save splits
             train_set.to_csv(self.ingestion_config.train_data_path, index=False, header=True)
             test_set.to_csv(self.ingestion_config.test_data_path, index=False, header=True)
 
             logging.info("Ingestion of data is completed")
 
-            return (
-                self.ingestion_config.train_data_path,
-                self.ingestion_config.test_data_path
-            )
+            return self.ingestion_config.train_data_path, self.ingestion_config.test_data_path
 
         except Exception as e:
             raise CustomException(e, sys)
 
 if __name__ == "__main__":
     obj = DataIngestion()
-    obj.initiate_data_ingestion()
+    train_data, test_data = obj.initiate_data_ingestion()
+
+    data_transformation = DataTransformation()
+    train_arr, test_arr, preprocessor_path = data_transformation.initiate_data_transformation(train_data, test_data)
+
+    model_trainer = ModelTrainer()
+    r2_score = model_trainer.initiate_model_trainer(train_arr, test_arr)
+    print("Model R2 Score:", r2_score)
